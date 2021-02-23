@@ -5,12 +5,11 @@ output:
     pandoc_args: --webtex
 
 ---
-# Geostatistics
 
 ## Check Working directory
 
 
-```{r include = FALSE}
+```{r include = TRUE}
 getwd()
 list.files()
 getwd()

@@ -1,9 +1,26 @@
 Geostatistics
 ================
 
-# Geostatistics
-
 ## Check Working directory
+
+``` r
+getwd()
+```
+
+    ## [1] "/home/juan/Documents/Inves/Webinar/Day1/1_Aquifer_GEO_R"
+
+``` r
+list.files()
+```
+
+    ## [1] "aquifer.txt"   "Example_files" "Example.html"  "Example.md"   
+    ## [5] "Example.Rmd"
+
+``` r
+getwd()
+```
+
+    ## [1] "/home/juan/Documents/Inves/Webinar/Day1/1_Aquifer_GEO_R"
 
 ## R packages
 
