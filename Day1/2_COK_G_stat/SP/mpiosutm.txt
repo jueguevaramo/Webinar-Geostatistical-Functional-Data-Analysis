@@ -1,0 +1,87 @@
+   
+ 
+  
+ 
+  Indice de Desarrollo Humano
+
+   Escala 1:250000
+
+Metadato
+
+Identificación de la Información 
+Calidad de la Información 
+Información de Referencia Espacial 
+Información de Referencia del Metadato 
+
+
+Identificación de la Información
+
+Fuente Centro de Investigación en Geografía y Geomática " Ing. Jorge L. Tamayo" 
+Fecha de Publicación 2003 
+Título Indice de Desarrollo Humano 
+Edición Primera 
+Representación Geoespacial Vectorial 
+Lugar de Publicación México, D.F. 
+
+Resumen
+
+Este mapa representa los rangos de índice de desarrollo Humano a nivel ZMCM.
+
+Propósito 
+
+El mapa sirve como base de información y forma parte del proyecto "Geociudad de México ".
+
+Calidad de la Información
+
+Consistencia Lógica
+
+La cartografía fue realizada en base a la información del censo 2000. polígono
+
+Linaje
+
+Fuente
+
+Autor Centro de Investigación en Geografía y Geomática " Ing. Jorge L. Tamayo", A.C. 
+Fecha de Publicación 2003 
+Título Indice de Desarrollo Humano 
+Edición Primera 
+Forma de Representación Geoespacial Vectorial 
+Lugar de Publicación México, D.F. 
+Publicador Centro de Investigación en Geografía y Geomática " Ing. Jorge L. Tamayo", A.C. 
+
+Metodología
+
+Descripción del proceso Se elaboro con base de la metodologia de la Programa de las Naciones Unidas para el Desarrollo. 
+Fecha 2003 
+
+ 
+
+Información de Referencia Espacial
+
+Nombre de proyección Universal Transversa de Mercator Zona 14 
+Parámetros:   
+Factor de Escala del Meridiano Central 0.9996 
+Longitud del Meridiano Central -99 
+Latitud de Proyección Origen 0 
+Falso Este 500000 
+Falso Norte 0 
+Coordenadas Planares, Método de Codificación Pares de Coordenadas 
+Resolución de Abscisa 1 
+Resolución de Ordenada 1 
+Unidades de Distancia Planar Metros 
+
+Información de Referencia del Metadato
+
+Fecha de Metadato 01/07/2003 
+Organización Centro de Investigación en Geografía y Geomática " Ing. Jorge L. Tamayo", A.C. 
+Estándar Basado en el FGDC (Content Standards for Digital Geoespatial Metadata) Versión 1994. 
+Generado por Israel Molina Espinosa. 
+
+ 
+ 
+ 
+
+© ® 1999-2006 Centro de Investigación en Geografía y Geomática "Ing. Jorge L. Tamayo" A.C.
+Reservados todos los derechos.
+ 
+ 

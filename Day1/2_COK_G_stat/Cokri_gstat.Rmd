@@ -1,0 +1,272 @@
+---
+title: "Cokriging"
+output:
+  html_document
+
+---
+
+
+# R Packages
+
+```{r echo = T, message = F}
+
+library(sp)
+library(gstat)
+library(sf)
+library(rgdal)
+library(ggplot2)
+library(plotly)
+library(Matrix)
+
+```
+# Data.
+
+Air Poultion data CDMX
+2020/01/16
+17
+
+```{r echo = T}
+
+
+datos <- read.csv("Air_polution_cdmx_2020_01_16_17h.csv")
+datos <- datos[c("Estacion",
+               "X",
+               "Y",
+               "NO2",
+               "O3",
+               "NOX")]
+
+pander::pander((datos))
+```
+
+# Corregionlization
+
+
+### Semipositive definite matrix spherical model
+
+```{r echo = T}
+mat1 <- cbind(c(30, 30, 30),
+              c(30, 50, 30),
+              c(30, 30, 35))
+#matriz definida positiva "cercana"
+mat1 <- data.frame(as.matrix(nearPD(mat1)$mat))
+names(mat1) <- c("NO2", "O3", "NOX")
+row.names(mat1) <- c("NO2", "O3", "NOX")
+pander::pander(mat1)
+```
+
+### Semipositive definite matrix spherical hol.
+
+```{r echo = T}
+mat2 <- cbind(c(13.02, 24.5, 18.739),
+              c(24.58, 46.4, 35.36),
+              c(18.73, 35.36, 26.95))
+mat2 <- data.frame(as.matrix(nearPD(mat2)$mat))
+names(mat2) <- c("NO2", "O3", "NOX")
+row.names(mat2) <- c("NO2", "O3", "NOX")
+pander::pander(mat2)
+```
+
+# G_stat object
+
+##  Semivariogram
+```{r echo = T}
+
+
+vgmno2 <- vgm(psill = mat1[1, 1],
+            model = "Sph",
+            range = 6096,
+            add.to = vgm(psill = mat2[1, 1],
+                         model = "Hol",
+                         range = 2294))
+
+vgmo3 <- vgm(psill = mat1[2, 2],
+            model = "Sph",
+            range = 6096,
+            add.to = vgm(psill = mat2[2, 2],
+                         model = "Hol",
+                         range = 2294))
+
+vgmnox <- vgm(psill = mat1[3, 3],
+            model = "Sph",
+            range = 6096,
+            add.to = vgm(psill = mat2[3, 3],
+                         model = "Hol",
+                         range = 2294))
+```
+
+## Cross semivarogram
+
+```{r echo = T}
+vgmno2_o3 <- vgm(psill = mat1[1, 2], model = "Sph",
+            range = 6096,
+            add.to = vgm(psill = mat2[1, 2],
+                         model = "Hol",
+                         range = 2294))
+
+vgmno2_nox <- vgm(psill = mat1[1, 3],
+            model = "Sph",
+            range = 6096,
+            add.to = vgm(psill = mat2[1, 3],
+                         model = "Hol",
+                         range = 2294))
+
+vgmno3_nox <- vgm(psill = mat1[2, 3],
+                  model = "Sph",
+                  range = 6096,
+                  add.to = vgm(psill = mat2[2, 3],
+                               model = "Hol",
+                               range = 2294))
+```
+
+## Gstat
+
+```{r echo = T}
+
+remove_na <- function(frame, vari_) {
+
+    # Remove na from sp object
+
+    datos1 <- frame
+
+    bool <- !is.na(datos1@data[vari_])
+    datos1@data <- datos1@data[bool, ]
+    datos1@coords <- datos1@coords[bool, ]
+
+    return(datos1)
+
+}
+
+coordinates(datos) <- ~ X + Y
+
+g_st <- gstat(NULL,
+              id = "NO2",
+              formula = NO2 ~ X + Y,
+              model = vgmno2,
+              data = remove_na(datos, "NO2"))
+
+g_st <- gstat(g_st,
+              id = "O3",
+              formula = O3 ~ Y,
+              model = vgmo3,
+              data = remove_na(datos, "O3"))
+
+g_st <- gstat(g_st,
+              id = "NOX",
+              formula = NOX ~ Y,
+              model = vgmnox,
+              data = remove_na(datos, "NOX"))
+#cross
+
+
+g_st <- gstat(g_st,
+              id = c("NO2", "O3"),
+              model = vgmno2_o3)
+
+g_st <- gstat(g_st,
+              id = c("NO2", "NOX"),
+              model = vgmno2_nox)
+
+g_st <- gstat(g_st,
+              id = c("O3", "NOX"),
+              model = vgmno3_nox)
+
+
+pander::pander(do.call(rbind, g_st$model)[, 1:3])
+```
+
+## Plot model model and estimation
+
+```{r echo = T}
+plot(variogram(g_st),
+     model = g_st$model,
+     pl = T)
+```
+
+## Prediction plot.
+
+```{r echo = T}
+
+prediction_plot <- function(g_object, variable, map_path) {
+
+    map <- readOGR(map_path)
+    new <- sp::spsample(map, n = 100000, type = "regular")
+    coordinates(new) ~ x1 + x2
+    colnames(new@coords) <- c("X", "Y")
+
+    predic <- predict(g_object, newdata = new)
+
+    prediction <- data.frame(predic)
+
+    pred <- paste(variable, ".pred", sep = "")
+
+    plot <- ggplot(prediction, aes_string("X", "Y", fill = pred)) +
+            geom_tile() +
+            scale_fill_viridis_c() +
+            theme_void()
+
+    return(plot)
+
+}
+
+
+variance_plot <- function(g_object, variable, map_path) {
+
+    map <- readOGR(map_path)
+    new <- sp::spsample(map, n = 10000, type = "regular")
+    coordinates(new) ~ x1 + x2
+    colnames(new@coords) <- c("X", "Y")
+
+    predic <- predict(g_object, newdata = new)
+
+    prediction <- data.frame(predic)
+
+    var <- paste(variable, ".var", sep = "")
+
+    plot <- ggplot(prediction, aes_string("X", "Y", fill = var)) +
+            geom_tile() +
+            scale_fill_viridis_c(option = "inferno",
+                                 direction = -1) +
+            theme_void()
+
+    return(plot)
+
+}
+
+cv_plot <- function(g_object, variable, map_path) {
+
+    map <- readOGR(map_path)
+    new <- sp::spsample(map, n = 10000, type = "regular")
+    coordinates(new) ~ x1 + x2
+    colnames(new@coords) <- c("X", "Y")
+
+    predic <- predict(g_object, newdata = new)
+
+    prediction <- data.frame(predic)
+    pred <- paste(variable, ".pred", sep = "")
+    var <- paste(variable, ".var", sep = "")
+    aux <- abs(sqrt(prediction[var]) / abs(prediction[pred]))
+    aux[aux > 1] <- 1
+    prediction["cv"] <- aux
+
+    plot <- ggplot(prediction, aes_string("X", "Y", fill = "cv")) +
+            geom_tile() +
+            scale_fill_viridis_c(option = "magma",
+                                 direction = -1) +
+            theme_void()
+
+    return(plot)
+}
+
+
+pl1 <- prediction_plot(g_st, "O3",
+                       "SP/mpiosutm.shp")
+pl2 <- variance_plot(g_st, "O3",
+                     "SP/mpiosutm.shp")
+pl3 <- cv_plot(g_st, "O3",
+               "SP/mpiosutm.shp")
+
+ggplotly(pl1)
+ggplotly(pl2)
+ggplotly(pl3)
+```
