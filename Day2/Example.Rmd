@@ -1,0 +1,261 @@
+---
+title: "FDA Practice"
+output:
+  html_document:
+    toc: true
+    theme: united
+
+
+---
+
+
+## R packages.
+
+```{r include = TRUE}
+library(fda)
+library(ggplot2)
+
+pm10 <- read.csv("MPM1017.csv")[, -1]
+no2 <- read.csv("MNO217.csv")[, -1]
+# no2 <- no2[, -c(1, 3)]
+
+plot1 <-
+    reshape2::melt(pm10) %>%
+    dplyr::select(Station = variable,
+                  PM10 = value) %>%
+    mutate(X = rep(seq(nrow(pm10)),
+                    ncol(pm10))) %>%
+    ggplot(aes_string(x = "X",
+                      y = "PM10",
+                      color = "Station")) +
+        geom_line() +
+        theme_light() +
+        scale_color_viridis_d()
+
+plot2 <-
+    reshape2::melt(no2) %>%
+    dplyr::select(Station = variable,
+                  NO2 = value) %>%
+    mutate(X = rep(seq(nrow(no2)),
+                    ncol(no2))) %>%
+    ggplot(aes_string(x = "X",
+                      y = "NO2",
+                      color = "Station")) +
+        geom_line() +
+        theme_light() +
+        scale_color_viridis_d()
+
+plotly::ggplotly(plot1)
+plotly::ggplotly(plot2)
+```
+
+# Create basis
+```{r include = TRUE}
+npm10 <- nrow(pm10)
+nno2 <- nrow(no2)
+
+base_bspline <- create.bspline.basis(c(1, npm10), 15)
+base_fu <- create.fourier.basis(c(1, nno2), 15)
+
+
+class(base_bspline)
+class(base_fu)
+methods(class = "basisfd")
+methods(class = "basisfd")
+
+```
+# Regression Spline
+
+
+## Define a Functional Parameter Object
+```{r include = T}
+
+param_lambda <- fdPar(base_bspline, lambda = 0)
+fd_smooth <- smooth.basis(argvals = seq(1, npm1o),
+                          y = as.matrix(pm10),
+                          fdParobj = param_lambda)
+methods(class = "fdPar")
+```
+
+
+## Smooth basis
+```{r include = T}
+
+fd_smooth <- smooth.basis(argvals = seq(1, npm1o),
+                          y = as.matrix(pm10),
+                          fdParobj = param_lambda)
+methods(class = "fdPar")
+```
+
+
+# Spline smoothing
+
+## Define a Functional Parameter Object
+```{r include = T}
+
+base_bspline <- create.bspline.basis(c(1, npm10), 15)
+param_lambda <- fdPar(base_bspline,
+                      2,
+                      lambda = 0.1)
+methods(class = "fdPar")
+```
+
+
+## Smooth basis
+```{r include = T}
+
+fd_smooth <- smooth.basis(argvals = seq(1, npm1o),
+                          y = as.matrix(pm10),
+                          fdParobj = param_lambda)
+methods(class = "fdSmooth")
+
+```
+
+
+## Lambda Selection.
+```{r include = T}
+
+gcv <- NULL
+lambda_list <- seq(-2, 4, length.out = 30)
+matrix_data <- as.matrix(pm10)
+
+for (lambda in lambda_list) {
+    lambda <- 10**lambda
+    param_lambda <- fdPar(base_bspline,
+                      2,
+                      lambda)
+    fd_smooth <- smooth.basis(argvals = seq(1,
+                                            nrow(matrix_data)),
+                              y = matrix_data,
+                              fdParobj = param_lambda)
+    gcv <- c(gcv, sum(fd_smooth$gcv))
+}
+
+plotgcv <-
+  data.frame(log_lambda = lambda_list,
+             gcv = gcv) %>%
+        ggplot(aes(x = log_lambda, y = gcv)) +
+        geom_line(color = "purple", linetype = "dashed") +
+        theme_light() +
+        scale_x_continuous(limits = c(0, 4))
+plotly::ggplotly(plotgcv)
+selected_lamdba <- 10**lambda_list[which.min(gcv)]
+print(selected_lamdba)
+print(log(selected_lamdba, 10))
+
+param_lambda <- fdPar(base_bspline,
+                      2,
+                      lambda = selected_lamdba)
+
+fd_smooth <- smooth.basis(argvals = seq(1,
+                                        nrow(matrix_data)),
+                          y = matrix_data,
+                          fdParobj = param_lambda)
+```
+
+# Mean and covariance
+```{r}
+
+
+summary(fd_smooth)
+summary(fd_smooth$fd)
+class(fd_smooth$fd)
+methods(class = "fd")
+
+mean_function <- mean.fd(fd_smooth$fd)
+plot(mean_function)
+
+
+variance_fda <- function(variance_surface,
+                         nda,
+                         npunt,
+                         x_lab = "X",
+                         y_lab = "Y",
+                         z_lab = "Z") {
+
+    eva <- seq(1, nda, length = npunt)
+    super_eval <- eval.bifd(eva, eva, variance_surface);
+    persp(eva, eva, super_eval,
+        theta = -45, phi = 25, r = 3, expand = 0.5,
+        ticktype = "detailed",
+        xlab = x_lab,
+        ylab = y_lab,
+        zlab = z_lab)
+}
+
+
+var_fd <- var.fd(fd_smooth$fd)
+variance_fda(var.fd(fd_smooth$fd), npm1o, 200)
+```
+
+
+# FPCA
+```{r}
+
+pcapm10 <- pca.fd(fd_smooth$fd,
+                nharm = 2,
+                harmfdPar = fdPar(fd_smooth$fd))
+
+str(pcapm10)
+class(pcapm10)
+methods(class = "pca.fd")
+
+plot(pcapm10)
+
+
+
+print(pcapm10$scores)
+print(pcapm10$params)
+
+
+plot(pcapm10$scores[, 1], pcapm10$scores[, 2])
+
+str(pcapm10$varprop)
+
+```
+
+
+# Functional BOX_PLOT
+
+```{r}
+ll <- boxplot.fd(fd_smooth$fd,  method = "MBD")
+ll$depth
+ll$medcurve
+
+
+cov.fun = function(d,k,c,mu){
+    k*exp(-c*d^mu)
+}
+n=50
+p=30
+t=seq(0,1,len=p)
+d=dist(t,upper=TRUE,diag=TRUE)
+d.matrix=as.matrix(d)                  # 
+#covariance function in time
+t.cov = cov.fun(d.matrix,1,1,1)
+# Cholesky Decomposition
+L=chol(t.cov)
+mu=4*t
+e=matrix(rnorm(n*p),p,n)
+ydata = mu+t(L)%*%e
+
+#functional boxplot
+fbplot(ydata, method='MBD', ylim=c(-11,15))
+
+##
+## Model 2 with outliers
+##
+#magnitude
+k=6
+#randomly introduce outliers
+C=rbinom(n,1,0.1)
+s=2*rbinom(n,1,0.5)-1
+cs.m=matrix(C*s,p,n,byrow=TRUE)
+e=matrix(rnorm(n*p),p,n)
+y=mu+t(L)%*%e+k*cs.m
+#functional boxplot
+fbplot(y,method='MBD',ylim=c(-11,15))
+```
+
+
+
